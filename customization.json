@@ -1,0 +1,47 @@
+{
+  "job_search_url": "https://www.naukri.com/python-developer-jobs",
+  "page_load_wait_time": 5,
+  "max_applications": 500,
+  "max_jobs_to_process": 50,
+  "max_error_count_per_job": 2,
+  "log_directory": "logs",
+  
+  "browser_settings": {
+    "profile_directory": "profile",
+    "chrome_options": [
+      "--start-maximized",
+      "--disable-notifications"
+    ],
+    "take_screenshots": true
+  },
+  
+  "preferences": {
+    "auto_fill": true,
+    "notification_enabled": true,
+    "default_resume_path": "/Users/apple/Documents/resume.pdf",
+    "job_sites": ["naukri.com", "linkedin.com", "indeed.com"],
+    "max_retry_attempts": 3
+  },
+  
+  "job_preferences": "I'm looking for Python developer roles with these preferences:\n- Remote or hybrid work options preferred\n- Experience level: 3-5 years\n- Tech stack: Python, Flask or Django, React\n- Salary range: 15-25 LPA\n- Don't want roles requiring Java or C# as primary skills\n- Interested in AI/ML opportunities\n- Prefer companies with good work-life balance\n- Looking for backend or full-stack positions",
+  
+  "default_answers": {
+    "notice_period": "60 days",
+    "expected_salary": "18 LPA",
+    "current_location": "Noida",
+    "preferred_locations": [ "Remote", "gurugram", "Jaipur"],
+    "reason_for_job_change": "Looking for better growth opportunities and challenging projects"
+  },
+  
+  "date_formats": {
+    "dob": "06/12/2004",
+    "job_application": "%Y-%m-%d %H:%M:%S"
+  },
+  
+  "selenium_timeouts": {
+    "default_wait": 10,
+    "element_wait": 5,
+    "page_load": 15,
+    "between_actions": 1
+  }
+}
