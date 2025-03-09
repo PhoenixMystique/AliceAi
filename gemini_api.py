@@ -8,89 +8,177 @@ https://ai.google.dev/gemini-api/docs/get-started/python
 """
 
 import os
+import json
+import sys
+import time
 
 import google.generativeai as genai
+from resume_parser import get_resume_data
 
-genai.configure(api_key="")
+def load_configuration(config_file="customization.json"):
+    """Load configuration from JSON file"""
+    try:
+        with open(config_file, 'r') as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"Error loading configuration: {e}")
+        return {}
 
-# Create the model
-# See https://ai.google.dev/api/python/google/generativeai/GenerativeModel
-generation_config = {
-  "temperature": 1,
-  "top_p": 0.95,
-  "top_k": 64,
-  "max_output_tokens": 1000,
-  "response_mime_type": "text/plain",
-}
+# Load configuration
+config = load_configuration()
 
+# Get API key from environment variables with fallback to config file
+api_key = os.environ.get("GEMINI_API_KEY")
+if not api_key:
+    api_key = config.get("gemini_api_key")
+    if not api_key:
+        print("WARNING: No Gemini API key found in environment variables or config file.")
+        print("Please set the GEMINI_API_KEY environment variable or add gemini_api_key to customization.json")
+        sys.exit(1)
+
+# Configure the API
+genai.configure(api_key=api_key)
+
+# Get model settings from config or use defaults
+generation_config = config.get("gemini_settings", {}).get("generation_config", {
+    "temperature": 1,
+    "top_p": 0.95,
+    "top_k": 64,
+    "max_output_tokens": 1000,
+    "response_mime_type": "text/plain",
+})
+
+# Create the model for regular questions
 model = genai.GenerativeModel(
-  model_name="gemini-1.5-flash",
-  generation_config=generation_config,
-  # safety_settings = Adjust safety settings
-  # See https://ai.google.dev/gemini-api/docs/safety-settings
-  system_instruction="remember all this when asked question you will answer from this data.\n"
-                     "be concise only answer in max 5 words, average of 2 words, min of 1 word\n, "
-                     "if it is a multi option question only give the index number of the answer",
+    model_name=config.get("gemini_settings", {}).get("model_name", "gemini-1.5-flash"),
+    generation_config=generation_config,
+    system_instruction=config.get("gemini_settings", {}).get("system_instruction", 
+        "remember all this when asked question you will answer from this data.\n"
+        "be concise only answer in max 5 words, average of 2 words, min of 1 word\n, "
+        "if it is a multi option question only give the index number of the answer")
 )
 
 # Create a separate model for preference matching with different system instruction
 preference_model = genai.GenerativeModel(
-  model_name="gemini-1.5-flash",
-  generation_config={
-    "temperature": 0.2,  # Lower temperature for more consistent responses
-    "top_p": 0.95,
-    "top_k": 64,
-    "max_output_tokens": 100,  # Short responses
-    "response_mime_type": "text/plain",
-  },
-  system_instruction="You are a job preference matching assistant. "
-                     "When comparing job descriptions with user preferences, "
-                     "only respond with 'yes' or 'no' followed by a brief one-sentence explanation. "
-                     "Be analytical and decisive in your assessment.",
+    model_name=config.get("gemini_settings", {}).get("preference_model_name", "gemini-1.5-flash"),
+    generation_config=config.get("gemini_settings", {}).get("preference_generation_config", {
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "top_k": 64,
+        "max_output_tokens": 100,
+        "response_mime_type": "text/plain",
+    }),
+    system_instruction=config.get("gemini_settings", {}).get("preference_system_instruction",
+        "You are a job preference matching assistant. "
+        "When comparing job descriptions with user preferences, "
+        "only respond with 'yes' or 'no' followed by a brief one-sentence explanation. "
+        "Be analytical and decisive in your assessment.")
 )
 
-chat_session = model.start_chat(
-  history=[
-    {
-      "role": "user",
-      "parts": [
-        'Add Resume in Stringified JSON format',
-      ],
-    },
-    {
-      "role": "model",
-      "parts": [
-        "This is a well-structured JSON object representing a resume. It contains a wealth of information about a person named John Doe, covering:\n\n**Personal Details:**\n\n* Full Name\n* Last Name\n* Email\n* LinkedIn Profile\n* Mobile Number\n\n**Education:**\n\n* Details of two degrees, including:\n    * Institution\n    * Location\n    * Degree Name\n    * GPA\n    * Start Date\n    * End Date\n\n**Skills:**\n\n* Categorized into:\n    * Languages\n    * Frameworks\n    * Tools\n    * Platforms\n    * Soft Skills\n\n**Work Experience:**\n\n* One entry with:\n    * Position\n    * Company\n    * Start Date\n    * End Date\n    * Responsibilities (list of bullet points)\n    * Tech Experience (duration of specific skills used)\n    * Joining Date\n    * Notice Period\n\n**Projects:**\n\n* Two entries with:\n    * Name\n    * Type (Personal/Academic)\n    * Start Date\n    * End Date\n    * Description (list of bullet points)\n    * Tech Experience (duration of specific skills used)\n\n**Certifications:**\n\n* Two entries with:\n    * Name\n    * Date\n\n**Additional Information:**\n\n* List of bullet points providing additional insights.\n\n**Strengths of this JSON:**\n\n* **Well-organized:** Data is grouped logically and clearly.\n* **Structured:** Consistent use of key-value pairs and arrays for easy parsing.\n* **Comprehensive:** Covers important resume sections.\n* **Detailed:** Provides sufficient information about each item.\n\n**Possible Enhancements:**\n\n* **Job Descriptions:**  Add more details to the \"responsibilities\" section, highlighting achievements and quantifiable results.\n* **Project Links:** Include links to live projects or repositories on platforms like GitHub.\n* **",
-      ],
-    },
-    {
-      "role": "user",
-      "parts": [
-        "remember all this when asked question you will answer from this data.\nyou will answer using this data min 1 word, average 3 words , and max 5 words and any information is not given then you can guess the answer",
-      ],
-    },
-    {
-      "role": "model",
-      "parts": [
-        "Understood. I will use the provided JSON data to answer your questions. I will aim for a minimum of one word, an average of three words, and a maximum of five words in my responses. \n",
-      ],
-    },
-  ]
-)
+# Initialize chat session variable but don't start the chat yet
+chat_session = None
+
+def initialize_chat_session():
+    """Initialize the chat session with resume data"""
+    global chat_session
+    
+    # Only initialize if not already initialized
+    if chat_session is not None:
+        return chat_session
+    
+    try:
+        # Get resume data by parsing PDF if configured
+        resume_data = get_resume_data(config)
+        
+        # Convert resume data to string if it's a dictionary
+        if isinstance(resume_data, dict):
+            resume_data_str = json.dumps(resume_data, indent=2)
+        else:
+            resume_data_str = str(resume_data)
+        
+        # Start chat session with context
+        chat_session = model.start_chat(
+            history=[
+                {
+                    "role": "user",
+                    "parts": [resume_data_str],
+                },
+                {
+                    "role": "model",
+                    "parts": ["I've processed your resume information and will use it to answer questions concisely."],
+                },
+                {
+                    "role": "user",
+                    "parts": ["remember all this when asked question you will answer from this data.\nyou will answer using this data min 1 word, average 3 words , and max 5 words and any information is not given then you can guess the answer, if nothing is given then you can say guess the answer never leave the question unanswered"],
+                },
+                {
+                    "role": "model",
+                    "parts": ["Understood. I will use the provided data for concise answers (1-5 words)."],
+                },
+            ]
+        )
+        
+        return chat_session
+    except Exception as e:
+        print(f"Error initializing chat session: {e}")
+        # Return None to indicate failure
+        return None
 
 
 def bard_flash_response(question) -> str:
-    try:
-      # Determine if this is a preference matching question
-      if "Based on the above information, does this job match my preferences?" in question:
-          # Use preference model for job matching questions
-          response = preference_model.generate_content(question)
-          return response.text
-      else:
-          # Use regular chat session for other queries
-          response = chat_session.send_message(question)
-          return response.text
-    except Exception as e:
-      print(f"An error occurred: {e}")
-      return "Error occurred"
+    """Get a response from Gemini API with proper error handling"""
+    global chat_session
+    
+    # Check for empty input
+    if not question or question.strip() == "":
+        print("Warning: Empty question provided to bard_flash_response")
+        return "Yes"  # Return a safe default
+    
+    # Maximum retry attempts
+    max_retries = 3
+    retry_count = 0
+    
+    while retry_count < max_retries:
+        try:
+            # Determine if this is a preference matching question
+            if "Based on the above information, does this job match my preferences?" in question:
+                # Use preference model for job matching questions
+                response = preference_model.generate_content(question)
+                return response.text
+            else:
+                # Initialize chat session if needed
+                if chat_session is None:
+                    chat_session = initialize_chat_session()
+                    
+                    # If initialization failed, use direct generate_content instead
+                    if chat_session is None:
+                        print("Warning: Using direct content generation as fallback")
+                        response = model.generate_content(question)
+                        return response.text
+                
+                # Use regular chat session for other queries
+                response = chat_session.send_message(question)
+                return response.text
+                
+        except Exception as e:
+            print(f"An error occurred in bard_flash_response: {e}")
+            retry_count += 1
+            
+            if retry_count < max_retries:
+                print(f"Retrying ({retry_count}/{max_retries})...")
+                
+                # If there was an error with the chat session, try to reinitialize it
+                if "chat_session" in str(e).lower() or "history" in str(e).lower():
+                    print("Attempting to reinitialize chat session")
+                    chat_session = None
+                    
+                time.sleep(1)  # Short pause before retry
+            else:
+                # Return a generic safe response that won't cause subsequent errors
+                if "multiple_choice" in str(e).lower() or "options" in str(e).lower():
+                    return "1"  # Default to first option for multiple choice
+                return "Yes"  # Default generic response
+    
+    # If we exhausted all retries
+    return "Yes"  # Default generic response
 

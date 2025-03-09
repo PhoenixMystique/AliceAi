@@ -1,16 +1,29 @@
 {
-  "job_search_url": "https://www.naukri.com/python-developer-jobs",
+  "job_search_url": "https://www.naukri.com/graphic-designer-jobs-in-noida",
   "page_load_wait_time": 5,
   "max_applications": 500,
-  "max_jobs_to_process": 50,
+  "max_jobs_to_process": 500,
+  "jobs_per_run": 150,
+  "concurrent_browsers": 10,
   "max_error_count_per_job": 2,
   "log_directory": "logs",
+  "refresh_interval_minutes": 10,
+  "max_retries": 3,
+  "gemini_api_key":"",
   
+  "resume_settings": {
+    "use_pdf_resume": true,
+    "resume_folder": "./resume",
+    "default_resume_filename": "resume.pdf",
+    "fallback_to_json_data": true,
+    "parsing_confidence_threshold": 0.8
+  },
   "browser_settings": {
     "profile_directory": "profile",
     "chrome_options": [
       "--start-maximized",
-      "--disable-notifications"
+      "--disable-notifications",
+      "--disable-popup-blocking"
     ],
     "take_screenshots": true
   },
@@ -18,19 +31,41 @@
   "preferences": {
     "auto_fill": true,
     "notification_enabled": true,
-    "default_resume_path": "/Users/apple/Documents/resume.pdf",
     "job_sites": ["naukri.com", "linkedin.com", "indeed.com"],
     "max_retry_attempts": 3
   },
   
-  "job_preferences": "I'm looking for Python developer roles with these preferences:\n- Remote or hybrid work options preferred\n- Experience level: 3-5 years\n- Tech stack: Python, Flask or Django, React\n- Salary range: 15-25 LPA\n- Don't want roles requiring Java or C# as primary skills\n- Interested in AI/ML opportunities\n- Prefer companies with good work-life balance\n- Looking for backend or full-stack positions",
+  "gemini_settings": {
+    "model_name": "gemini-1.5-flash",
+    "preference_model_name": "gemini-1.5-flash",
+    "generation_config": {
+      "temperature": 1,
+      "top_p": 0.95,
+      "top_k": 64,
+      "max_output_tokens": 1000,
+      "response_mime_type": "text/plain"
+    },
+    "preference_generation_config": {
+      "temperature": 0.2,
+      "top_p": 0.95,
+      "top_k": 64,
+      "max_output_tokens": 100,
+      "response_mime_type": "text/plain"
+    },
+    "system_instruction": "remember all this when asked question you will answer from this data.\nbe concise only answer in max 5 words, average of 2 words, min of 1 word\n, if it is a multi option question only give the index number of the answer",
+    "preference_system_instruction": "You are a job preference matching assistant. When comparing job descriptions with user preferences, only respond with 'yes' or 'no' followed by a brief one-sentence explanation. Be analytical and decisive in your assessment."
+  },
+  
+  "job_preferences": "Graphic designer related job",
   
   "default_answers": {
-    "notice_period": "60 days",
-    "expected_salary": "18 LPA",
+    "notice_period": "0 days (Immediate)",
+    "expected_salary": "6 LPA",
+    "current_salary": "4.5 LPA",
     "current_location": "Noida",
-    "preferred_locations": [ "Remote", "gurugram", "Jaipur"],
-    "reason_for_job_change": "Looking for better growth opportunities and challenging projects"
+    "preferred_locations": ["Remote", "noida"],
+    "reason_for_job_change": "Looking for better growth opportunities and challenging projects",
+    "generic_response": "Yes"
   },
   
   "date_formats": {
@@ -39,9 +74,9 @@
   },
   
   "selenium_timeouts": {
-    "default_wait": 10,
-    "element_wait": 5,
-    "page_load": 15,
+    "default_wait": 2,
+    "element_wait": 4,
+    "page_load": 6,
     "between_actions": 1
   }
 }
