@@ -9,8 +9,6 @@
 
 **Your AI-powered job application assistant that automates the boring parts of job hunting**
 
-<img src="https://i.imgur.com/YourLogoHere.png" alt="AliceJobSeeker Logo" width="200"/>
-
 </div>
 
 ## ✨ Features
